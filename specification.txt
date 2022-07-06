@@ -1,0 +1,43 @@
+  -- FÉROVÉ MINY --
+
+ZÁKLAD:
+  Základem je klasický Minesweeper. Na začátku hry jsou náhodně vygenerovány
+  pozice min. Čísla ostatních políček jsou generována dynamicky ve chvíli, kdy
+  jsou odkryta. Během hry si program udržuje seznam políček na tzv. vnitřní a
+  vnější hranici.
+    * Vnitřní hranice: množina všech odkrytých políček, v jejichž okolí je
+                       neodkryté políčko
+    * Vnější hranice: množina všech neodkrytých políček, v jejichž okolí je
+                      odkryté políčko
+  Program dokáže z vnitřní hranice zjistit, zda může uživatel bezpečně odkrýt
+  některé políčko z vnější hranice.
+    * Nemůže-li a odkryje-li minu, tato mina je přesunuta na jiné náhodné
+      políčko tak, aby vnější hranice měla nejméně jedno řešení.
+    * Může-li a odkryje-li prázdné políčko bez jistoty, musí existovat mina,
+      již je možno na toto políčko přesunout.
+
+UŽIVATELSKÉ ROZHRANÍ:
+  Terminál, knihovna curses (linux)    [Textual (MacOS / Linux / Windows)]
+  Primárně ovládáno pomocí myši, avšak možnost plně ovládat i pouze klávesnicí
+  Menu ovládáno pouze klácesnicí
+
+POMOCNÉ FUNKCE:
+  * Časovač - od odkrytí prvního do odkrytí posledního políčka
+  * Zobrazený počet neoznačených min
+  * Pause menu - zakrytá herní plocha, přerušený časovač
+               - možnost spustit novou hru
+               - nastavení
+               - autor, licence
+
+NASTAVENÍ:
+  * Maximální velikost hrací plochy
+    (velikost hrací plochy dána velikostí terminálu)
+  * Počet min - několik automatických úrovní obtížnosti
+              - možnost zadat vlastní pevný počet
+                - měnit se změnou velikosti hrací plochy či nikoliv
+  Nastavení bude uloženo v konfiguračním souboru, např. ve formátu XML
+
+VEDLEJŠÍ NÁPADY:  (možná naprogramuji, podle času a chuti)
+  * statistika
+  * nastavení ovládání (key/button mapping)
+  * nastavení barev a vzhledu

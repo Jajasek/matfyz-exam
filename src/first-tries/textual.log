@@ -1,0 +1,10 @@
+---
+driver=<class 'textual.drivers.linux_driver.LinuxDriver'>
+Load() >>> MyApp(title='Textual')
+Mount() >>> MyApp(title='Simple App')
+CLOSED MyApp(title='Simple App')
+PROCESS END
+Mount() >>> DockView(name='DockView#1')
+Mount() >>> Header('')
+Mount() >>> ScrollView(name='ScrollView#1')
+Mount() >>> ScrollView(name='ScrollView#1')
