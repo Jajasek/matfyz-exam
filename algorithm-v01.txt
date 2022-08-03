@@ -1,0 +1,104 @@
+This is the condensed but precise description of the first functional
+algorithm for handling left-click. The algorithm is planned to be reworked
+to acheve better performance.
+
+VARIABLE DEFINITIONS:
+Let Cell denote tuple[int, int], representing the coordinates (y, x) of a cell.
+Region is either a Cell or a sentinel value UNTOUCHED.
+covered: int, the number of currently covered cells
+total_mines: int, the total number of mines to be discovered
+minefield: list[list[int]], the current state of the minefield:
+    42: mine,
+    37: not mine, covered,
+    0, ..., 8: uncovered number
+mine_cells: set[Cell], the set of untouched cells that contain mine
+empty_cells: set[Cell], the set of untouched cells that do not contain mine
+possible: set[Region], regions that can be safely uncovered by the player
+normal_directions: dict[Cell, int], the keys are a set of all cells on the
+    boundary, associated values are the directions the cells were accessed from
+all_boundaries: list[Boundary], the list of all possible boundary
+    configurations from the player point of view
+boundaries: dict[Region, list[Boundary]], the keys are a set of all boundary
+    cells together with the value UNTOUCHED, associated values are lists of all
+    boundary configurations, that do not have a mine on said cell;
+    boundary[UNTOUCHED] are boundaries that have enough mines for the untouched
+    region to have at least one empty cell
+ue_boundaries: list[Boundary], boundaries that do not contain all mines,
+    therefore there is at least one mine in the untouched region
+
+THE BOUNDARY CLASS:
+  - extending: we would like some sort of tree-like structure
+  - cutting (selecting subset with specific cell having specific value),
+    multiple times in a row
+  - deciding if a cut exists
+  - choosing a random boundary from a cut
+
+THE ALGORITHM:
+input: (py, px), the cell the player is trying to uncover
+
+Let pos be the region (py, px) belongs to, ie. (py, px) if (py, px) on the
+    boundary, UNTOUCHED otherwise. If pos == UNTOUCHED, remove (py, px) from
+    mine_cells or empty_cells, depending on in which set it is.
+There could be 4 scenarios:
+  I. player knows the region is empty:
+    safely uncover the cell (described below)
+ II. player knows the region is full of mines:
+    explode (described below)
+III. there are both possibilities and player could safely uncover another cell:
+    check that the cell contains a mine; if not, move a mine here:
+    A. pos == UNTOUCHED:
+        implement random boundary from ue_boundaries, fixing (py, px) to be a
+        mine
+    B. (py, px) is on the boundary:
+        implement random boundary from all_boundaries - boundaries[pos]
+    explode (described below)
+ IV. player had no safe choice, might need our assistance:
+    check that the cell doesn't contain a mine; if it does, move it away
+        (implement random boundary from boundaries[pos], fixing (py, px) to be
+        empty in case pos == UNTOUCHED)
+    safely uncover the cell (described below)
+
+SAFELY UNCOVERING:
+input: (py, px), the cell to uncover
+
+Helper variables:
+  - old: list[Cell], the cells that were on the boundary and are uncovered
+  - new: list[Cell], the cells that were untouched and now are on the boundary
+If (py, px) is zero, run a DFS to uncover the whole region of zeroes. On each
+    visited cell (y, x):
+  - count mines
+  - print the count to the screen
+  - write the count into minefield
+  - reduce covered, remove from mine_cells or empty_cells, possible,
+    normal_directions.
+  - if it was in normal_directions, add it to old.
+  - count mines of each neighbour, add zeros to the stack; add non-zeros to
+    the queue to be uncovered later
+For each (y, x) in nonzero_queue (or just (py, px) if nonzero):
+  - count mines
+  - print the count to the screen
+  - write the count into minefield
+  - reduce covered, remove from mine_cells or empty_cells, possible,
+    normal_directions.
+  - if it was in normal_directions, add it to old.
+  - for each untouched neighbour (ny, nx) that is not in nonzero_queue:
+      - remove from mine_cells or empty_cells
+      - save the direction it was approached from in normal_directions
+      - add to new
+cache boundaries[pos] as possible_boundaries
+clear all_boundaries, ue_boundaries, boundaries
+for each b in possible boundaries:
+  - filter (if b[o] for some o in old, b cannot be a possibility;
+            b must not cause any cell from nonzero_queue to have too litle or
+            too many mines)
+  - delete old cells
+  - extend b, save to all_boundaries
+for each b in all_boundaries:
+  - add b to boundaries[cell] for each cell which does not contain a mine
+  - add b to ue_boundaries if it does not contain all mines
+  - add b to boundaries[UNTOUCHED] if it contains enough mines to leave an
+    empty untouched cell
+if there is an untouched cell and all such cells are empty, add UNTOUCHED to
+    possible, otherwise remove UNTOUCHED from possible
+for each cell in normal_directions:
+    if no boundary has mine on cell, add cell to possible

@@ -146,23 +146,6 @@ class Minefield:
         #                 self.minefield[y + dy][x + dx] != 42):
         #             self.minefield[y + dy][x + dx] += 1
 
-    # def _uncover_dfs(self, y: int, x: int, new: list[Field],
-    #                  direction: int = 0) -> None:
-    #     number = self._count_mines(y, x)
-    #     # TODO: _print_field
-    #     self.covered -= 1
-    #     if (y, x) in self.normal_directions:
-    #         del self.normal_directions[(y, x)]
-    #         if (y, x) in self.possible:
-    #             self.possible.remove((y, x))
-    #     direction = direction % 8 - 8
-    #     if number:
-    #         pass
-    #     else:
-    #         for d in range(direction, direction + 8):
-    #             dy, dx = DIRECTIONS[d]
-    #             self._uncover_dfs(y + dy, x + dx, new, )
-
     def _draw_minefield(self) -> None:
         """Draw the whole minefield before the game starts."""
         try:
@@ -242,7 +225,8 @@ class Minefield:
                                               (y, x), True)
                 else:
                     # the following 'if' has only debugging purpose. The code
-                    # sometimes breakes here becouse the set is empty.
+                    # sometimes breakes here because the set is empty. But
+                    # the problem seems to have been fixed.
                     # TODO: remove this debug 'if'
                     if not set(self.all_boundaries) - set(self.boundaries[pos]):
                         raise AssertionError(
@@ -379,6 +363,7 @@ class Minefield:
         # sort all boundaries
         for b in self.all_boundaries:
             for cell, mine in b:
+                cell: tuple[int, int]
                 if not mine:
                     self.boundaries[cell].append(b)
             if m := self.total_mines - b.get_number_of_mines() > 0:

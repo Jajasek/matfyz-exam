@@ -100,14 +100,6 @@ class FairMinesweeper:
         curses.wrapper(main)
 
     @classmethod
-    def debug_run(cls) -> None:
-        import traceback
-        try:
-            cls.run()
-        except Exception:
-            print(traceback.format_exc())
-
-    @classmethod
     def emulated_run(cls) -> None:
         commands = [
             (0, 6, 6, 0, UNCOVER_PRESSED),
