@@ -6,10 +6,12 @@ UNCOVER_RELEASED = curses.BUTTON1_RELEASED
 MARK_PRESSED = curses.BUTTON2_PRESSED
 MARK_RELEASED = curses.BUTTON2_RELEASED
 
-MINE_RATIO = 33 / 160  # the exact ratio in the original on expert difficulty
+MINE_RATIO = 1/4
+# 33 / 160  # the exact ratio in the original on expert difficulty
 
+# components are in range [0, 1000]
 RGB_BGC = (500, 500, 500)
-RGB_BGU = (750, 750, 750)
+RGB_BGU = (800, 800, 800)
 RGB_SQUARE = (1000, 1000, 1000)
 RGB_1 = (0, 0, 1000)
 RGB_2 = (0, 500, 0)
@@ -22,6 +24,7 @@ RGB_8 = (500, 500, 500)
 RGB_FLAG = (1000, 204, 204)
 RGB_MINE = (0, 0, 0)
 RGB_EXPLOSION = (1000, 0, 0)
+RGB_HINT = (0, 750, 0)
 RGB_EMOJI = (1000, 1000, 0)
 RGB_COUNTER = (1000, 0, 0)
 RGB_COUNTERBG = (0, 0, 0)
@@ -41,10 +44,11 @@ COLOR_8 = 18
 COLOR_FLAG = 19
 COLOR_MINE = 20
 COLOR_EXPLOSION = 21
-COLOR_EMOJI = 22
-COLOR_COUNTER = 23
-COLOR_COUNTERBG = 24
-COLOR_BORDER = 25
+COLOR_HINT = 22
+COLOR_EMOJI = 23
+COLOR_COUNTER = 24
+COLOR_COUNTERBG = 25
+COLOR_BORDER = 26
 
 PAIR_1 = 1
 PAIR_2 = 2
@@ -59,9 +63,11 @@ PAIR_SQUARE = 10
 PAIR_PRESS = 11
 PAIR_MINE = 12
 PAIR_EXPLOSION = 13
-PAIR_EMOJI = 14
-PAIR_COUNTER = 15
-PAIR_BORDER = 16
+PAIR_HINT = 14
+PAIR_EMOJI = 15
+PAIR_COUNTER = 16
+PAIR_BORDER = 17
+PAIR_SPACE = 18
 
 
 # noinspection DuplicatedCode
@@ -81,6 +87,7 @@ def init_colors() -> None:
     curses.init_color(COLOR_FLAG, *RGB_FLAG)
     curses.init_color(COLOR_MINE, *RGB_MINE)
     curses.init_color(COLOR_EXPLOSION, *RGB_EXPLOSION)
+    curses.init_color(COLOR_HINT, *RGB_HINT)
     curses.init_color(COLOR_EMOJI, *RGB_EMOJI)
     curses.init_color(COLOR_COUNTER, *RGB_COUNTER)
     curses.init_color(COLOR_COUNTERBG, *RGB_COUNTERBG)
@@ -99,11 +106,8 @@ def init_colors() -> None:
     curses.init_pair(PAIR_PRESS, COLOR_SQUARE, COLOR_BGU)
     curses.init_pair(PAIR_MINE, COLOR_MINE, COLOR_BGC)
     curses.init_pair(PAIR_EXPLOSION, COLOR_MINE, COLOR_EXPLOSION)
+    curses.init_pair(PAIR_HINT, COLOR_HINT, COLOR_BGU)
     curses.init_pair(PAIR_EMOJI, COLOR_EMOJI, COLOR_BGU)
     curses.init_pair(PAIR_COUNTER, COLOR_COUNTER, COLOR_COUNTERBG)
     curses.init_pair(PAIR_BORDER, COLOR_BORDER, COLOR_BGU)
-
-
-
-
-
+    curses.init_pair(PAIR_SPACE, COLOR_BGU, COLOR_BGC)

@@ -4,7 +4,7 @@ import curses.ascii
 from minefield import Minefield
 from configuration import UNCOVER_PRESSED, UNCOVER_RELEASED, MARK_PRESSED, \
     MARK_RELEASED, init_colors, PAIR_BORDER
-from MyLib.ocurses.curses_utilities import border
+from MyLib.ocurses.curses_utilities import border, addstr
 
 
 class FairMinesweeper:
@@ -44,15 +44,16 @@ class FairMinesweeper:
     def draw_frames(self) -> None:
         """Draw frames aroud the application window and minefield."""
         border(self.window, u'\u2551', u'\u2551', u'\u2550', u'\u2550',
-               u'\u2554', u'\u2566', u'\u255A', u'\u2569',
+               u'\u2554', u'\u2557', u'\u255A', u'\u255D',
                curses.color_pair(PAIR_BORDER))
         winy, winx = self.window.getmaxyx()
-        self.window.addstr(2, 0, u'\u2550' * winx,
-                           curses.color_pair(PAIR_BORDER))
+        addstr(self.window, 2, 0, u'\u2560' + u'\u2550' * (winx - 2) +
+               u'\u2563', curses.color_pair(PAIR_BORDER))
         self.window.refresh()
 
     def mainloop(self) -> None:
         while True:
+            curses.doupdate()
             # event = self.stdscr.getch()
             event = self.getch()
             if event == curses.KEY_MOUSE:
@@ -71,7 +72,6 @@ class FairMinesweeper:
                         self.minefield.mouse_uncover_cancel()
                     elif bstate == MARK_RELEASED:
                         self.minefield.mouse_mark_cancel()
-                self.minefield.window.refresh()
             elif event == curses.ascii.ESC:
                 # TODO: menu
                 pass
@@ -95,7 +95,7 @@ class FairMinesweeper:
             cls(stdscr).mainloop()
 
         # set the delay in ms after pressing the ESC key (the start of function
-        # key sequence)
+        # key sequence) to the minimum
         curses.set_escdelay(1)
         curses.wrapper(main)
 

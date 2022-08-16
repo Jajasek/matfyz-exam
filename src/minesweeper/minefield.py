@@ -6,6 +6,8 @@ from collections.abc import Iterable
 from queue import LifoQueue
 from random import choice, sample
 
+from MyLib.ocurses.curses_utilities import addstr
+
 import configuration as conf
 
 
@@ -129,7 +131,8 @@ class Minefield:
             for y in range(self.dimensions[0])
         ]
 
-        self._draw_minefield()
+        self.renderer = Renderer(self.window, self.dimensions, self.minefield)
+        self.renderer.draw_minefield()
 
         # The commented code below could be used instead, with appropriate
         # changes, to track the number of neighbouring mines dynamically. It
@@ -146,24 +149,13 @@ class Minefield:
         #                 self.minefield[y + dy][x + dx] != 42):
         #             self.minefield[y + dy][x + dx] += 1
 
-    def _draw_minefield(self) -> None:
-        """Draw the whole minefield before the game starts."""
-        try:
-            for y in range(self.dimensions[0]):
-                self.window.addstr(y, 0, ' □' * self.dimensions[1] + ' ',
-                                   curses.color_pair(conf.PAIR_SQUARE))
-        except curses.error:
-            pass
-        self.window.refresh()
-
     def mouse_uncover_press(self, y: int, x: int) -> None:
         """If the pressed cell is covered, redraw and save it."""
         # The parameters are the coordinates of on-screen character.
-        celly, cellx = self._char_to_cell(y, x)
+        celly, cellx = self._char_to_cell(y, x, True)
         if self.minefield[celly][cellx] > 8:
             self.pressed = [(celly, cellx)]
-            self.window.addstr(celly, 2 * cellx + 1, '·',
-                               curses.color_pair(conf.PAIR_PRESS))
+            self.renderer.draw_pressed(celly, cellx)
 
     def mouse_uncover_release(self) -> None:
         """Uncover the previously pressed cell, analyze the information."""
@@ -175,8 +167,7 @@ class Minefield:
         """Unpress previously pressed cell, do not uncover."""
         if self.pressed:
             y, x = self.pressed[0]
-            self.window.addstr(y, 2*x + 1, '□',
-                               curses.color_pair(conf.PAIR_SQUARE))
+            self.renderer.draw_released(y, x)
             self.pressed = []
 
     def mouse_mark_press(self, y: int, x: int) -> None:
@@ -184,7 +175,7 @@ class Minefield:
         If uncovered, redraw and save all covered neighbours. Othervise mark.
         """
         # The parameters are the coordinates of on-screen character.
-        pass
+        celly, cellx = self._char_to_cell(y, x, False)
 
     def mouse_mark_release(self) -> None:
         """If previously pressed cell has enough flags, uncover neighbours."""
@@ -194,14 +185,29 @@ class Minefield:
         """Regraw neighbours of previously pressed cell. Do not uncover."""
         pass
 
-    def _char_to_cell(self, chy: int, chx: int) -> Cell:
+    def _char_to_cell(self, chy: int, chx: int, uncover: bool) -> Cell:
         """Convert on-screen character coordinates to coordinates of a cell."""
         offsety, offsetx = self.window.getbegyx()
         y, x = chy - offsety, chx - offsetx
         if x % 2:
             return y, x // 2
         else:
-            # TODO: snapping
+            if x == self.window.getmaxyx()[1] - 1:
+                return y, x // 2 - 1
+            if x == 0 or (y, x // 2 - 1) not in self.normal_directions:
+                return y, x // 2
+            if (y, x // 2) not in self.normal_directions:
+                return y, x // 2 - 1
+            if uncover:
+                if (y, x // 2) in self.possible:
+                    return y, x // 2
+                if (y, x // 2 - 1) in self.possible:
+                    return y, x // 2 - 1
+            else:
+                if not self.boundaries[y, x // 2]:
+                    return y, x // 2
+                if not self.boundaries[y, x // 2 - 1]:
+                    return y, x // 2 - 1
             return y, x // 2
 
     def _uncover(self, y: int, x: int) -> None:
@@ -399,13 +405,7 @@ class Minefield:
             mines = self._count_mines(y, x)
 
         # print the uncovered cell to the screen
-        if mines:
-            self.window.addstr(y, 2*x + 1, str(mines), curses.color_pair(
-                getattr(conf, f'PAIR_{mines}')
-            ))
-        else:
-            self.window.addstr(y, 2 * x + 1, ' ',
-                               curses.color_pair(conf.PAIR_1))
+        self.renderer.draw_uncovered(y, x, mines)
 
         # remove it from datastructures containing covered cells
         self.covered -= 1
@@ -487,17 +487,14 @@ class Minefield:
 
     def _explode(self, y: int, x: int) -> None:
         """Uncover a cell (y, x) containing mine, render, update game state."""
-        try:
-            for my, mx in self.mine_cells:
-                self.window.addstr(my, 2*mx + 1, '💣',
-                                   curses.color_pair(conf.PAIR_MINE))
-            self.window.addstr(y, 2*x + 1, '💣',
-                               curses.color_pair(conf.PAIR_EXPLOSION))
-        except curses.error:
-            # addstr() throws error when writing to the bottom-right corner
-            # of a window, because cursor cannot be moved right. However,
-            # the character is still printed.
-            pass
+        for my, mx in self.mine_cells:
+            self.renderer.draw_mine(my, mx)
+        for my, mx in self.normal_directions:
+            if self.minefield[my][mx] == MINE:
+                self.renderer.draw_mine(my, mx)
+        self.renderer.draw_explosion(y, x)
+        if self.possible:
+            self.renderer.draw_hint(*self.possible.pop())
         self.game_state = 2
 
     def _overwrite_minefield(
@@ -560,3 +557,93 @@ class Minefield:
         # cache possible boundaries, update state
         possible_boundaries: list[_Boundary] = self.all_boundaries
         self._update_state(possible_boundaries, new, old, uncovered)
+
+
+class Renderer:
+    MINE_CHAR: str = '💣'
+    COVERED_CHAR: str = '□'
+    HINT_CHAR: str = '🖢'
+    FLAG_CHAR: str = '⚑'
+
+    def __init__(self, window: curses.window, dimensions: tuple[int, int],
+                 minefield: list[list[int]]) -> None:
+        self.window = window
+        self.dimensions = dimensions
+        self.minefield = minefield
+
+    def draw_minefield(self) -> None:
+        """Draw the whole minefield before the game starts."""
+        for y in range(self.dimensions[0]):
+            addstr(self.window, y, 0, '▌', curses.color_pair(conf.PAIR_SPACE))
+            addstr(self.window, y, 1,
+                   ' '.join(self.COVERED_CHAR * self.dimensions[1]),
+                   curses.color_pair(conf.PAIR_SQUARE))
+            addstr(self.window, y, 2*self.dimensions[1], '▐',
+                   curses.color_pair(conf.PAIR_SPACE))
+        self.window.noutrefresh()
+
+    def draw_pressed(self, y: int, x: int) -> None:
+        addstr(self.window, y, 2*x + 1, '·',
+               curses.color_pair(conf.PAIR_PRESS))
+        self._draw_spaces(y, x, True)
+        self.window.noutrefresh()
+
+    def draw_released(self, y: int, x: int) -> None:
+        addstr(self.window, y, 2*x + 1, '□',
+               curses.color_pair(conf.PAIR_SQUARE))
+        self._draw_spaces(y, x, False)
+        self.window.noutrefresh()
+
+    def draw_uncovered(self, y: int, x: int, mines: int) -> None:
+        if mines:
+            addstr(self.window, y, 2*x + 1, str(mines), curses.color_pair(
+                getattr(conf, f'PAIR_{mines}')
+            ))
+        else:
+            addstr(self.window, y, 2*x + 1, ' ',
+                   curses.color_pair(conf.PAIR_1))
+        self._draw_spaces(y, x, True)
+        self.window.noutrefresh()
+
+    def draw_mine(self, y: int, x: int) -> None:
+        addstr(self.window, y, 2*x + 1, self.MINE_CHAR,
+               curses.color_pair(conf.PAIR_MINE))
+        self.window.noutrefresh()
+
+    def draw_explosion(self, y: int, x: int) -> None:
+        addstr(self.window, y, 2*x + 1, self.MINE_CHAR,
+               curses.color_pair(conf.PAIR_EXPLOSION))
+        if x == 0 or self.minefield[y][x - 1] != MINE:
+            self._draw_space(y, 2*x, x == 0 or self.minefield[y][x - 1] <= 8,
+                             False)
+        self.window.noutrefresh()
+
+    def draw_hint(self, y: int, x: int) -> None:
+        addstr(self.window, y, 2*x + 1, self.HINT_CHAR,
+               curses.color_pair(conf.PAIR_HINT))
+        if x == 0 or self.minefield[y][x - 1] != MINE:
+            self._draw_space(y, 2*x, x == 0 or self.minefield[y][x - 1] <= 8,
+                             True)
+        self._draw_space(y, 2*x + 2, True, x == self.dimensions[1] - 1 or
+                         self.minefield[y][x + 1] <= 8)
+        self.window.noutrefresh()
+
+    def _draw_spaces(self, y: int, x: int, uncovered: bool) -> None:
+        # TODO: This condition will not register when more cells are pressed
+        self._draw_space(y, 2*x, x == 0 or self.minefield[y][x - 1] <= 8,
+                         uncovered)
+        self._draw_space(y, 2*x + 2, uncovered, x == self.dimensions[1] - 1 or
+                         self.minefield[y][x + 1] <= 8)
+
+    def _draw_space(self, chy: int, chx: int, left: bool, right: bool)\
+            -> None:
+        char = ' ' if left == right else '▌'
+        attr = curses.A_REVERSE if right else 0
+        addstr(self.window, chy, chx, char,
+               curses.color_pair(conf.PAIR_SPACE) | attr)
+
+    def draw_flag(self, y: int, x: int) -> None:
+        addstr(self.window, y, 2*x + 1, self.FLAG_CHAR,
+               curses.color_pair(conf.PAIR_FLAG))
+        self._draw_spaces(y, x, False)
+        self.window.noutrefresh()
