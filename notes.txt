@@ -16,3 +16,36 @@ to do:
            the window back. Otherwise, the game will be terminated.
      ~ If the game is not running (either fresh or post-game):
            delete the minefield, resize and create new, adapted to the new size
+ * snapping
+   - cell types:
+      ┌─ border
+      └─ cell
+          ├─ covered
+          │   ├─ flagged
+          │   │   ├─ explosive
+          │   │   └─ can-be-empty
+          │   └─ pressable
+          │       ┠─┬─ possible
+          │       ┃ └─ can-be-mine
+          │       ┠─┬─ explosive
+          │       ┃ └─ can-be-empty
+          │       ┖─┬─ untouched
+          │         └─ boundary
+          └─ uncovered
+              ├─ chordable
+              └─ unchordable
+   - left click:
+       border <
+       uncovered == flagged <
+       pressable can-be-mine untouched <
+       pressable can-be-mine boundary <
+       pressable possible
+   - right click:
+       border <
+       flagged explosive <
+       pressable can-be-empty <
+       unchordable <
+       chordable <
+       flagged can-be-empty <
+       pressable explosive
+   - when indecisive, snap to the right

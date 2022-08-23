@@ -3,10 +3,10 @@ import curses
 
 UNCOVER_PRESSED = curses.BUTTON1_PRESSED
 UNCOVER_RELEASED = curses.BUTTON1_RELEASED
-MARK_PRESSED = curses.BUTTON2_PRESSED
-MARK_RELEASED = curses.BUTTON2_RELEASED
+MARK_PRESSED = curses.BUTTON3_PRESSED
+MARK_RELEASED = curses.BUTTON3_RELEASED
 
-MINE_RATIO = 1/4
+MINE_RATIO = 1/8
 # 33 / 160  # the exact ratio in the original on expert difficulty
 
 # components are in range [0, 1000]
@@ -21,7 +21,7 @@ RGB_5 = (500, 0, 0)
 RGB_6 = (0, 500, 500)
 RGB_7 = (0, 0, 0)
 RGB_8 = (500, 500, 500)
-RGB_FLAG = (1000, 204, 204)
+RGB_FLAG = (1000, 304, 304)
 RGB_MINE = (0, 0, 0)
 RGB_EXPLOSION = (1000, 0, 0)
 RGB_HINT = (0, 750, 0)
@@ -29,6 +29,7 @@ RGB_EMOJI = (1000, 1000, 0)
 RGB_COUNTER = (1000, 0, 0)
 RGB_COUNTERBG = (0, 0, 0)
 RGB_BORDER = (500, 500, 500)
+RGB_MISTAKE = (0, 1000, 0)
 
 COLOR_BGC = 8
 COLOR_BGU = 9
@@ -49,6 +50,7 @@ COLOR_EMOJI = 23
 COLOR_COUNTER = 24
 COLOR_COUNTERBG = 25
 COLOR_BORDER = 26
+COLOR_MISTAKE = 27
 
 PAIR_1 = 1
 PAIR_2 = 2
@@ -68,6 +70,7 @@ PAIR_EMOJI = 15
 PAIR_COUNTER = 16
 PAIR_BORDER = 17
 PAIR_SPACE = 18
+PAIR_MISTAKE = 19
 
 
 # noinspection DuplicatedCode
@@ -92,6 +95,7 @@ def init_colors() -> None:
     curses.init_color(COLOR_COUNTER, *RGB_COUNTER)
     curses.init_color(COLOR_COUNTERBG, *RGB_COUNTERBG)
     curses.init_color(COLOR_BORDER, *RGB_BORDER)
+    curses.init_color(COLOR_MISTAKE, *RGB_MISTAKE)
 
     curses.init_pair(PAIR_1, COLOR_1, COLOR_BGU)
     curses.init_pair(PAIR_2, COLOR_2, COLOR_BGU)
@@ -111,3 +115,4 @@ def init_colors() -> None:
     curses.init_pair(PAIR_COUNTER, COLOR_COUNTER, COLOR_COUNTERBG)
     curses.init_pair(PAIR_BORDER, COLOR_BORDER, COLOR_BGU)
     curses.init_pair(PAIR_SPACE, COLOR_BGU, COLOR_BGC)
+    curses.init_pair(PAIR_MISTAKE, COLOR_MISTAKE, COLOR_BGC)
