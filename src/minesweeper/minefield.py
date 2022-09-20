@@ -136,6 +136,8 @@ class Minefield:
         self.ue_boundaries: list[_Boundary] = []
         # the list of pressed cells (between press and release of a button)
         self.pressed: list[Cell] = []
+        # indication whether pressed uncovered cell is being chorded
+        self.chord: bool = False
 
         # initializing values
         maxy, maxx = window.getmaxyx()
@@ -210,55 +212,36 @@ class Minefield:
                 self.minefield[celly][cellx] += 2
                 self.renderer.draw_covered(celly, cellx)
         else:
-            # TODO: press neighbours
+            flags = 0
+            for dy, dx in DIRECTIONS:
+                ny, nx = celly + dy, cellx + dx
+                if self.dimensions[0] > ny >= 0 <= nx < self.dimensions[1]:
+                    if is_flagged(self.minefield[ny][nx]):
+                        flags += 1
+                    elif is_pressable(self.minefield[ny][nx]):
+                        self.renderer.draw_pressed(ny, nx)
+                        self.pressed.append((ny, nx))
+            self.chord = flags >= self.minefield[celly][cellx] and self.pressed
             pass
 
     def mouse_mark_release(self) -> None:
         """If previously pressed cell has enough flags, uncover neighbours."""
-        pass
+        if not self.pressed:
+            return
+        if self.chord:
+            self._uncover_several(self.pressed)
+        else:
+            for y, x in self.pressed:
+                self.renderer.draw_covered(y, x)
 
     def mouse_mark_cancel(self) -> None:
         """Regraw neighbours of previously pressed cell. Do not uncover."""
-        pass
+        for y, x in self.pressed:
+            self.renderer.draw_covered(y, x)
+        self.chord = False
 
     def _char_to_cell(self, chy: int, chx: int, uncover: bool) -> Cell:
         """Convert on-screen character coordinates to coordinates of a cell."""
-        # offsety, offsetx = self.window.getbegyx()
-        # y, x = chy - offsety, chx - offsetx
-        # if x % 2:
-        #     # exactly in the middle of a cell
-        #     return y, x // 2
-        # else:
-        #     # between cells
-        #     if x == self.window.getmaxyx()[1] - 1:
-        #         # snaping away from the right boundary
-        #         return y, x // 2 - 1
-        #     if x == 0 or (y, x // 2 - 1) not in self.normal_directions:
-        #         # snapping away from the left boundary or an untouched cell on
-        #         # the left
-        #         return y, x // 2
-        #     if (y, x // 2) not in self.normal_directions:
-        #         # snapping away from an untouched cell on the right
-        #         return y, x // 2 - 1
-        #     if uncover:
-        #         # left-click
-        #         if not is_pressable(self.minefield[y][x // 2 - 1]):
-        #             # snapping away
-        #             return y, x // 2
-        #         if not is_pressable(self.minefield[y][x // 2]):
-        #             return y, x // 2 - 1
-        #         if (y, x // 2) in self.possible:
-        #             return y, x // 2
-        #         if (y, x // 2 - 1) in self.possible:
-        #             return y, x // 2 - 1
-        #     else:
-        #         # right-click
-        #         if not self.boundaries[y, x // 2]:
-        #             return y, x // 2
-        #         if not self.boundaries[y, x // 2 - 1]:
-        #             return y, x // 2 - 1
-        #     return y, x // 2
-
         offsety, offsetx = self.window.getbegyx()
         y, x = chy - offsety, chx - offsetx
         right = x // 2
@@ -729,11 +712,11 @@ class Minefield:
         """
         Uncover each given cell on the boundary when known that it is empty.
         """
-        new, old, uncovered = self._uncover_search(*cells)
+        new, old, inner_boundary = self._uncover_search(*cells)
 
         # cache possible boundaries, update state
         possible_boundaries: list[_Boundary] = self.all_boundaries
-        self._update_state(possible_boundaries, new, old, uncovered)
+        self._update_state(possible_boundaries, new, old, inner_boundary)
 
 
 class Renderer:
