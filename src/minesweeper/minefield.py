@@ -222,7 +222,6 @@ class Minefield:
                         self.renderer.draw_pressed(ny, nx)
                         self.pressed.append((ny, nx))
             self.chord = flags >= self.minefield[celly][cellx] and self.pressed
-            pass
 
     def mouse_mark_release(self) -> None:
         """If previously pressed cell has enough flags, uncover neighbours."""
@@ -233,6 +232,7 @@ class Minefield:
         else:
             for y, x in self.pressed:
                 self.renderer.draw_covered(y, x)
+        self.pressed.clear()
 
     def mouse_mark_cancel(self) -> None:
         """Regraw neighbours of previously pressed cell. Do not uncover."""
