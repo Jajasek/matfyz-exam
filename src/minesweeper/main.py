@@ -102,14 +102,14 @@ class FairMinesweeper:
     @classmethod
     def emulated_run(cls) -> None:
         commands = [
+            (0, 6, 6, 0, UNCOVER_PRESSED),
+            (0, 6, 6, 0, UNCOVER_RELEASED),
             (0, 6, 6, 0, MARK_PRESSED),
             (0, 6, 6, 0, MARK_RELEASED),
             (0, 6, 7, 0, UNCOVER_PRESSED),
             (0, 6, 6, 0, UNCOVER_RELEASED),
             (0, 6, 6, 0, MARK_PRESSED),
             (0, 6, 6, 0, MARK_RELEASED),
-            (0, 6, 6, 0, UNCOVER_PRESSED),
-            (0, 6, 6, 0, UNCOVER_RELEASED),
         ]
         curses.getmouse = iter(commands).__next__
 

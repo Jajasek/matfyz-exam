@@ -156,9 +156,7 @@ class Minefield:
             for y in range(self.dimensions[0])
         ]
 
-        self.renderer = Renderer(
-            self.window, self.dimensions, self.minefield, self.pressed
-        )
+        self.renderer = Renderer(self.window, self.dimensions, self.minefield)
         self.renderer.draw_minefield()
 
         # The commented code below could be used instead, with appropriate
@@ -179,22 +177,25 @@ class Minefield:
     def mouse_uncover_press(self, y: int, x: int) -> None:
         """If the pressed cell is covered, redraw and save it."""
         # The parameters are the coordinates of on-screen character.
+        if self.pressed:
+            # This should never happen
+            return
         celly, cellx = self._char_to_cell(y, x, True)
         if is_pressable(self.minefield[celly][cellx]):
-            self.pressed = [(celly, cellx)]
             self.renderer.draw_pressed(celly, cellx)
+            self.pressed.append((celly, cellx))
 
     def mouse_uncover_release(self) -> None:
         """Uncover the previously pressed cell, analyze the information."""
         if self.pressed:
             self._uncover(*self.pressed[0])
-            self.pressed = []
+            self.pressed.clear()
 
     def mouse_uncover_cancel(self) -> None:
         """Unpress previously pressed cell, do not uncover."""
         if self.pressed:
             self.renderer.draw_covered(*self.pressed[0])
-            self.pressed = []
+            self.pressed.clear()
 
     def mouse_mark_press(self, y: int, x: int) -> None:
         """
@@ -219,14 +220,19 @@ class Minefield:
                     if is_flagged(self.minefield[ny][nx]):
                         flags += 1
                     elif is_pressable(self.minefield[ny][nx]):
-                        self.renderer.draw_pressed(ny, nx)
                         self.pressed.append((ny, nx))
             self.chord = flags >= self.minefield[celly][cellx] and self.pressed
+
+            # render
+            self.renderer.set_pressed(self.pressed)
+            for py, px in self.pressed:
+                self.renderer.draw_pressed(py, px)
 
     def mouse_mark_release(self) -> None:
         """If previously pressed cell has enough flags, uncover neighbours."""
         if not self.pressed:
             return
+        self.renderer.set_pressed([])
         if self.chord:
             self._uncover_several(self.pressed)
         else:
@@ -726,10 +732,13 @@ class Renderer:
     FLAG_CHAR: str = '⚑'
 
     def __init__(self, window: curses.window, dimensions: tuple[int, int],
-                 minefield: list[list[int]], pressed: list[Cell]) -> None:
+                 minefield: list[list[int]]) -> None:
         self.window = window
         self.dimensions = dimensions
         self.minefield = minefield
+        self.pressed: list[Cell] = []
+
+    def set_pressed(self, pressed: list[Cell]):
         self.pressed = pressed
 
     def draw_minefield(self) -> None:
