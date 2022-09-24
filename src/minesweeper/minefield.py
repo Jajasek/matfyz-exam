@@ -40,6 +40,11 @@ def is_flagged(number: int) -> bool:
     return number in (9, 10)
 
 
+def is_close(event: tuple[Any, int, int], y: int, x: int) -> bool:
+    """Return True if mouse movement between press and release was small."""
+    return abs(event[1] - y) <= 1 and abs(event[2] - x) <= 2
+
+
 # noinspection PyPep8Naming
 class _DO_NOT_SET:
     pass
@@ -88,7 +93,12 @@ class _Boundary:
 
 
 class Minefield:
-
+    """
+    The object representing the playable area, containing the main game
+    mechanics. It manages the state of the game, changes it based on registered
+    events (calls to mouse_* methods) and renders the state to the screen using
+    the Renderer class.
+    """
     def __init__(self, window: curses.window) -> None:
         # the window the Minefield will be drawn on. It has odd width and
         # squares will be on odd x-coordinates.
@@ -138,6 +148,11 @@ class Minefield:
         self.pressed: list[Cell] = []
         # indication whether pressed uncovered cell is being chorded
         self.chord: bool = False
+        # the button that is currently held, another clicks will be ignored
+        # (type, y, x)
+        self.last_press_event: tuple[
+            Literal['uncover', 'mark', None], int, int
+        ] = (None, 0, 0)
 
         # initializing values
         maxy, maxx = window.getmaxyx()
@@ -176,32 +191,46 @@ class Minefield:
 
     def mouse_uncover_press(self, y: int, x: int) -> None:
         """If the pressed cell is covered, redraw and save it."""
-        # The parameters are the coordinates of on-screen character.
-        if self.pressed:
-            # This should never happen
+        # The parameters are the coordinates of the on-screen character.
+        if self.last_press_event[0]:
             return
+        self.last_press_event = ('uncover', y, x)
+
         celly, cellx = self._char_to_cell(y, x, True)
         if is_pressable(self.minefield[celly][cellx]):
             self.renderer.draw_pressed(celly, cellx)
             self.pressed.append((celly, cellx))
 
-    def mouse_uncover_release(self) -> None:
+    def mouse_uncover_release(self, y: int, x: int) -> None:
         """Uncover the previously pressed cell, analyze the information."""
-        if self.pressed:
-            self._uncover(*self.pressed[0])
-            self.pressed.clear()
+        # The parameters are the coordinates of the on-screen character.
+        if self.last_press_event[0] == 'uncover':
+            if self.pressed:
+                if is_close(self.last_press_event, y, x):
+                    # action
+                    self._uncover(*self.pressed[0])
+                    self.pressed.clear()
+                else:
+                    # cancel
+                    self.renderer.draw_covered(*self.pressed[0])
+                    self.pressed.clear()
+            self.last_press_event = (None, 0, 0)
 
-    def mouse_uncover_cancel(self) -> None:
-        """Unpress previously pressed cell, do not uncover."""
-        if self.pressed:
-            self.renderer.draw_covered(*self.pressed[0])
-            self.pressed.clear()
+    # def mouse_uncover_cancel(self) -> None:
+    #     """Unpress previously pressed cell, do not uncover."""
+    #     if self.pressed:
+    #         self.renderer.draw_covered(*self.pressed[0])
+    #         self.pressed.clear()
 
     def mouse_mark_press(self, y: int, x: int) -> None:
         """
         If uncovered, redraw and save all covered neighbours. Othervise mark.
         """
         # The parameters are the coordinates of on-screen character.
+        if self.last_press_event[0]:
+            return
+        self.last_press_event = ('mark', y, x)
+
         celly, cellx = self._char_to_cell(y, x, False)
         if is_covered(self.minefield[celly][cellx]):
             if is_pressable(self.minefield[celly][cellx]):
@@ -228,23 +257,40 @@ class Minefield:
             for py, px in self.pressed:
                 self.renderer.draw_pressed(py, px)
 
-    def mouse_mark_release(self) -> None:
+    def mouse_mark_release(self, y: int, x: int) -> None:
         """If previously pressed cell has enough flags, uncover neighbours."""
-        if not self.pressed:
-            return
-        self.renderer.set_pressed([])
-        if self.chord:
-            self._uncover_several(self.pressed)
-        else:
-            for y, x in self.pressed:
-                self.renderer.draw_covered(y, x)
-        self.pressed.clear()
+        if self.last_press_event[0] == 'mark':
+            if self.pressed:
+                self.renderer.set_pressed([])
+                if is_close(self.last_press_event, y, x):
+                    # action
+                    if self.chord:
+                        self._uncover_several(self.pressed)
+                    else:
+                        for y, x in self.pressed:
+                            self.renderer.draw_covered(y, x)
+                else:
+                    # cancel
+                    for y, x in self.pressed:
+                        self.renderer.draw_covered(y, x)
+                self.pressed.clear()
+            self.last_press_event = (None, 0, 0)
 
-    def mouse_mark_cancel(self) -> None:
-        """Regraw neighbours of previously pressed cell. Do not uncover."""
-        for y, x in self.pressed:
-            self.renderer.draw_covered(y, x)
-        self.chord = False
+        # if not self.pressed:
+        #     return
+        # self.renderer.set_pressed([])
+        # if self.chord:
+        #     self._uncover_several(self.pressed)
+        # else:
+        #     for y, x in self.pressed:
+        #         self.renderer.draw_covered(y, x)
+        # self.pressed.clear()
+
+    # def mouse_mark_cancel(self) -> None:
+    #     """Regraw neighbours of previously pressed cell. Do not uncover."""
+    #     for y, x in self.pressed:
+    #         self.renderer.draw_covered(y, x)
+    #     self.chord = False
 
     def _char_to_cell(self, chy: int, chx: int, uncover: bool) -> Cell:
         """Convert on-screen character coordinates to coordinates of a cell."""
@@ -257,7 +303,7 @@ class Minefield:
             return y, x // 2
         elif uncover:  # between cells, left click
 
-            # Snapping away borders
+            # Snapping away from borders
             if x == 0:
                 return y, right
             if x == self.window.getmaxyx()[1] - 1:
@@ -290,7 +336,7 @@ class Minefield:
 
         else:  # between cells, right click
 
-            # Snapping away borders
+            # Snapping away from borders
             if x == 0:
                 return y, right
             if x == self.window.getmaxyx()[1] - 1:

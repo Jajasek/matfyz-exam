@@ -21,8 +21,3 @@
 ║ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ ║
 ║ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ ║
 ╚═════════════════════════════════╝
-
-COLORS:
-Foreground: according to number
-            Flag: Red
-            Mine: 

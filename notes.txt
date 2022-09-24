@@ -10,13 +10,13 @@ to do:
    - If the minefield size changes, there is no way of continuing the game
    - Therefore, the most "game-preserving" option seems:
      ~ If there is a game running and the available space increases:
-           keep the minefield at current size, resize after restart
+           keep the minefield at current size, resize new game
      ~ If there is a game running and the available space schrinks:
            pause the game, summon a dialog, asking the user to kindly enlarge
            the window back. Otherwise, the game will be terminated.
      ~ If the game is not running (either fresh or post-game):
            delete the minefield, resize and create new, adapted to the new size
- * snapping
+ * snapping - DONE
    - cell types:
       ┌─ border
       └─ cell
@@ -49,3 +49,11 @@ to do:
        flagged can-be-empty <
        pressable explosive
    - when indecisive, snap to the right
+ * Optimalization ideas:
+   - When a cell is certainly mine, do not treat it as boundary cell, create
+     a special cell class for this. This prevents these "perfect-information"
+     cells to be copied over and over when bruteforcing the new boundaries.
+   - Create a special tree-like structure for the boundaries to prevent copying
+     data all together. The only operation we need is "cutting the tree",
+     meaning choosing a subset of the boundaries with given value for given
+     cell. This operation might be implementable in a bearable time.

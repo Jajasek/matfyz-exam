@@ -2,8 +2,9 @@ import curses
 import curses.ascii
 
 from minefield import Minefield
+from bar import Bar
 from configuration import UNCOVER_PRESSED, UNCOVER_RELEASED, MARK_PRESSED, \
-    MARK_RELEASED, init_colors, PAIR_BORDER
+    MARK_RELEASED, init_colors, PAIR_BORDER, LEFT_PRESSED, LEFT_RELEASED
 from MyLib.ocurses.curses_utilities import border, addstr
 
 
@@ -25,6 +26,10 @@ class FairMinesweeper:
         # noinspection PyTypeChecker
         self.minefield = Minefield(curses.newwin(
             winy - 4, winx - 2, offsety + 3, offsetx + 1
+        ))
+        # noinspection PyTypeChecker
+        self.bar = Bar(curses.newwin(
+            1, winx - 2, offsety + 1, offsetx + 1
         ))
 
         # start receiving mouse events
@@ -58,20 +63,36 @@ class FairMinesweeper:
             event = self.getch()
             if event == curses.KEY_MOUSE:
                 _, x, y, _, bstate = curses.getmouse()
-                if self.is_inside_minefield(y, x):
-                    if bstate == UNCOVER_PRESSED:
-                        self.minefield.mouse_uncover_press(y, x)
-                    elif bstate == UNCOVER_RELEASED:
-                        self.minefield.mouse_uncover_release()
-                    elif bstate == MARK_PRESSED:
-                        self.minefield.mouse_mark_press(y, x)
-                    elif bstate == MARK_RELEASED:
-                        self.minefield.mouse_mark_release()
-                else:
-                    if bstate == UNCOVER_RELEASED:
-                        self.minefield.mouse_uncover_cancel()
-                    elif bstate == MARK_RELEASED:
-                        self.minefield.mouse_mark_cancel()
+
+                if (bstate == UNCOVER_PRESSED
+                        and self.is_inside_minefield(y, x)):
+                    self.minefield.mouse_uncover_press(y, x)
+                elif bstate == UNCOVER_RELEASED:
+                    self.minefield.mouse_uncover_release(y, x)
+                elif bstate == MARK_PRESSED and self.is_inside_minefield(y, x):
+                    self.minefield.mouse_mark_press(y, x)
+                elif bstate == MARK_RELEASED:
+                    self.minefield.mouse_mark_release(y, x)
+
+                if bstate == LEFT_PRESSED and self.is_inside_bar(y, x):
+                    self.bar.mouse_press(y, x)
+                elif bstate == LEFT_RELEASED:
+                    self.bar.mouse_release(y, x)
+
+                # if self.is_inside_minefield(y, x):
+                #     if bstate == UNCOVER_PRESSED:
+                #         self.minefield.mouse_uncover_press(y, x)
+                #     elif bstate == UNCOVER_RELEASED:
+                #         self.minefield.mouse_uncover_release()
+                #     elif bstate == MARK_PRESSED:
+                #         self.minefield.mouse_mark_press(y, x)
+                #     elif bstate == MARK_RELEASED:
+                #         self.minefield.mouse_mark_release()
+                # else:
+                #     if bstate == UNCOVER_RELEASED:
+                #         self.minefield.mouse_uncover_cancel()
+                #     elif bstate == MARK_RELEASED:
+                #         self.minefield.mouse_mark_cancel()
             elif event == curses.ascii.ESC:
                 # TODO: menu
                 pass
@@ -83,9 +104,16 @@ class FairMinesweeper:
         return self.stdscr.getch()
 
     def is_inside_minefield(self, y: int, x: int) -> bool:
-        """Determine if char (y, x) is inside the minefield  window."""
+        """Determine if char (y, x) is inside the minefield window."""
         offsety, offsetx = self.minefield.window.getbegyx()
         maxy, maxx = self.minefield.window.getmaxyx()
+        return (offsety <= y < offsety + maxy and
+                offsetx <= x < offsetx + maxx)
+
+    def is_inside_bar(self, y: int, x: int) -> bool:
+        """Determine if char (y, x) is inside the top bar window."""
+        offsety, offsetx = self.bar.window.getbegyx()
+        maxy, maxx = self.bar.window.getmaxyx()
         return (offsety <= y < offsety + maxy and
                 offsetx <= x < offsetx + maxx)
 
@@ -124,3 +152,5 @@ class FairMinesweeper:
 if __name__ == '__main__':
     FairMinesweeper.run()
     # FairMinesweeper.emulated_run()
+
+    # Mouse: 5 -> 1.8
