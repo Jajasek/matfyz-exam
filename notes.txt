@@ -57,3 +57,17 @@ to do:
      data all together. The only operation we need is "cutting the tree",
      meaning choosing a subset of the boundaries with given value for given
      cell. This operation might be implementable in a bearable time.
+
+     This tree-like structure could be a single large number r. Let [c1,...,cn]
+     be a list of boundary cells. A particular boundary B could be represented
+     by a number #B, whose i-th bit would give the state of ai. Then the j-th
+     bit of r would be 1 if the boundary represented by j is possible.
+
+     Extending:
+     'for j in range(numbits(r)) if r[j]:
+          newr[2j] = 1 if can_be_empty(j), newr[2j+1] = 1 if can_be_mine(j)'
+     Cutting: remove half of the bits of r, in evenly-spaced blocks of the size
+     corresponding to the cell we want to cut through
+ * Quick fixes:
+   - There are graphic bugs when exploding (most notably when chording,
+     there are pressed cells whose spaces get overwritten wrongly)

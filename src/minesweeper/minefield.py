@@ -5,6 +5,7 @@ from typing import TypeAlias, Literal, Generator, Any
 from collections.abc import Iterable
 from queue import LifoQueue
 from random import choice, sample
+import time
 
 from MyLib.ocurses.curses_utilities import addstr
 
@@ -572,7 +573,9 @@ class Minefield:
                     ):
                         break
                 else:
-                    self.all_boundaries.extend(self._extend(b, new))
+                    self.all_boundaries.append(b)
+                    # self.all_boundaries.extend(self._extend(b, new))
+        self.all_boundaries = self._extend_faster(self.all_boundaries, new)
 
         # sort all boundaries
         for b in self.all_boundaries:
@@ -633,13 +636,51 @@ class Minefield:
         if not cells_to_add:
             yield incomplete_boundary
             return
-        if self._can_be_mine(incomplete_boundary, *cells_to_add[0]):
+        mine = self._can_be_mine(incomplete_boundary, *cells_to_add[0])
+        empty = self._can_be_empty(incomplete_boundary, *cells_to_add[0])
+        if mine and empty:
             branch = incomplete_boundary.copy()
             branch.set_mine(*cells_to_add[0])
             yield from self._extend(branch, cells_to_add[1:])
-        if self._can_be_empty(incomplete_boundary, *cells_to_add[0]):
             incomplete_boundary.set_empty(*cells_to_add[0])
             yield from self._extend(incomplete_boundary, cells_to_add[1:])
+        elif mine:
+            incomplete_boundary.set_mine(*cells_to_add[0])
+            yield from self._extend(incomplete_boundary, cells_to_add[1:])
+        elif empty:
+            incomplete_boundary.set_empty(*cells_to_add[0])
+            yield from self._extend(incomplete_boundary, cells_to_add[1:])
+
+    def _extend_faster(self, to_extend: list[_Boundary],
+                       cells_to_add: list[Cell]) -> list[_Boundary]:
+        """
+        Extend each boundary in to_extend to given cells in every possible way.
+        """
+        while cells_to_add:
+            # manual loop control
+            maxi = len(to_extend)
+            i = 0
+            while i < maxi:
+                boundary = to_extend[i]
+                mine = self._can_be_mine(boundary, *cells_to_add[0])
+                empty = self._can_be_empty(boundary, *cells_to_add[0])
+                if mine and empty:
+                    branch = boundary.copy()
+                    branch.set_mine(*cells_to_add[0])
+                    to_extend.append(branch)
+                    boundary.set_empty(*cells_to_add[0])
+                elif mine:
+                    boundary.set_mine(*cells_to_add[0])
+                elif empty:
+                    boundary.set_empty(*cells_to_add[0])
+                else:
+                    del to_extend[i]
+                    maxi -= 1
+                    i -= 1
+                i += 1
+            cells_to_add.pop(0)
+
+        return to_extend
 
     def _can_be_mine(self, given_boundary: _Boundary, y: int, x: int) -> bool:
         """
@@ -706,7 +747,11 @@ class Minefield:
                 self.renderer.draw_mine(my, mx)
         self.renderer.draw_explosion(y, x)
         if self.possible:
-            self.renderer.draw_hint(*self.possible.pop())
+            pos = self.possible.pop()
+            if pos == UNTOUCHED:
+                self.renderer.draw_hint(*self.empty_cells.pop())
+            else:
+                self.renderer.draw_hint(*pos)
         self.game_state = 2
 
     def _overwrite_minefield(
@@ -717,6 +762,8 @@ class Minefield:
         Write boundary into minefield, placing untouched mines randomly.
         When untouched fixcell given, fix it either to be or not to be mine.
         """
+        # fixcell doesn't have to be moved from mine_cells to empty_cells or
+        # vice versa, because it will be uncovered immediately afterwards
         change: int = 0
         change_list: list = list(boundary)
         if fixcell:
@@ -732,10 +779,12 @@ class Minefield:
         if change > 0:
             for y, x in sample(tuple(self.empty_cells - {fixcell}), k=change):
                 self.minefield[y][x] += 1
+                self.empty_cells.remove((y, x))
                 self.mine_cells.add((y, x))
         elif change < 0:
             for y, x in sample(tuple(self.mine_cells - {fixcell}), k=-change):
                 self.minefield[y][x] -= 1
+                self.mine_cells.remove((y, x))
                 self.empty_cells.add((y, x))
 
     def _uncover_several(self, cells: list[Cell]) -> None:
