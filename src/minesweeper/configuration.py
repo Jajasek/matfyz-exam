@@ -8,7 +8,8 @@ MARK_RELEASED = curses.BUTTON3_RELEASED
 LEFT_PRESSED = curses.BUTTON1_PRESSED
 LEFT_RELEASED = curses.BUTTON1_RELEASED
 
-MINE_RATIO = 33 / 160  # the exact ratio in the original on expert difficulty
+MINE_RATIO = 45/160
+# 33 / 160  # the exact ratio in the original on expert difficulty
 
 # components are in range [0, 1000]
 RGB_BGC = (500, 500, 500)
